@@ -140,6 +140,10 @@ func (m *cloudIamManager) createClient() (*admin.IamClient, error) {
 }
 
 func (m *cloudIamManager) loadFromDisc() error {
+	// Start from a fresh slate and ensure all previous resources are removed
+	for item, _ := range m.resources {
+		delete(m.resources, item)
+	}
 	load := func(folder string) (userCollection, error) {
 		var folderpath string
 		folderpath = path.Join(m.storer.GetPath(), "GoogleCloudPlatform/Project", m.Project, folder)
