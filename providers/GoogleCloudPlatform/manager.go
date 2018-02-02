@@ -118,7 +118,7 @@ func (m *cloudIamManager) ListModifiedResources() ([]overwatch.IamResource, erro
 			Email: resp.GetEmail(),
 			Type:  "ServiceAccount",
 		}
-		stored, exist := m.resources[serviceAccount.GetName()]
+		stored, exist := m.resources[serviceAccount.Email]
 		switch {
 		case !exist:
 			modifiedResources = append(modifiedResources, serviceAccount)
@@ -174,7 +174,7 @@ func (m *cloudIamManager) loadFromDisc() error {
 	}
 	for _, resource := range serviceaccounts {
 		resource.Type = "ServiceAccount"
-		m.resources[resource.GetName()] = resource
+		m.resources[resource.Email] = resource
 	}
 	// Load Members from disc
 	// Load Roles from disc
