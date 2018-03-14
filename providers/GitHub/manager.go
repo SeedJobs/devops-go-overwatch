@@ -61,7 +61,9 @@ func (m *manager) Resync() ([]overwatch.IamResource, error) {
 
 func (m *manager) fetchOrgProjects() []*project {
 	opt := &gogithub.RepositoryListByOrgOptions{
-		ListOptions: gogithub.ListOptions{PerPage: 10},
+		ListOptions: gogithub.ListOptions{
+			PerPage: 64,
+		},
 	}
 	var allRepos []*project
 	for {
@@ -75,7 +77,6 @@ func (m *manager) fetchOrgProjects() []*project {
 				Public:    !pro.GetPrivate(),
 				Protected: []string{},
 			}
-			// Found out all protected Branches
 			branches, _, err := m.client.Repositories.ListBranches(context.Background(),
 				pro.GetOwner().GetName(),
 				pro.GetName(),
