@@ -39,7 +39,9 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 		authclient = oauth2.NewClient(context.Background(), ts)
 	}
 	m.client = gogithub.NewClient(authclient)
-	if org, exist := conf.Additional["GITHUB_ORG"].(string); !exist {
+	if org, exist := conf.Additional["GITHUB_ORG"].(string); exist {
+		m.organisation = org
+	} else {
 		return fmt.Errorf("GITHUB_ORG was not defined in conf additional map")
 	}
 	return nil
