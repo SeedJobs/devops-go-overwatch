@@ -51,7 +51,7 @@ func TestCloningCodeViaSSH(t *testing.T) {
 	if _, err := os.Stat(keypath); os.IsNotExist(err) {
 		t.Skip("Can not find default ssh key to use")
 	}
-	path := "test/http"
+	path := "test/ssh"
 	s, err := git.NewSynchro(synchro.Information{
 		RemoteURL: "git@github.com:AlexsJones/kepler.git",
 		Location:  path,
@@ -82,7 +82,7 @@ func TestCloningCodeViaSSH(t *testing.T) {
 }
 
 func TestCloningCode(t *testing.T) {
-	path := "test/ssh"
+	path := "test/http"
 	s, err := git.NewSynchro(synchro.Information{
 		RemoteURL: "https://github.com/AlexsJones/kepler.git",
 		Location:  path,

@@ -10,6 +10,7 @@ import (
 func TestInterface(t *testing.T) {
 	man, err := github.NewManager()
 	if err != nil {
+		t.Log("issue:", err)
 		t.Fatal("Unable to create manager")
 	}
 	if _, ok := man.(overwatch.IamPolicyManager); !ok {

@@ -37,7 +37,7 @@ func NewManager() (overwatch.IamPolicyManager, error) {
 }
 
 func (m *cloudIamManager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
-	m.expire = time.Now().Add(conf.TimeOut)
+	m.expire = m.expire.Add(conf.TimeOut)
 	project, ok := conf.Additional["Project"].(string)
 	if !ok {
 		return fmt.Errorf("Unable to convert Project from Additional to a string")
