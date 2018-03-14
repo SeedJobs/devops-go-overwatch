@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
@@ -31,8 +30,8 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	}
 	// Configure and store resources that are needed for the Client
 	var authclient *http.Client = nil
-	if envVar, exist := conf.Additional["GITHUB_TOKEN"].(string); exist {
-		token := os.Getenv(envVar)
+	if token, exist := conf.Additional["GITHUB_TOKEN"].(string); exist {
+		fmt.Println("Using token")
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
@@ -52,20 +51,20 @@ func (m *manager) Resources() []overwatch.IamResource {
 }
 
 func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
-	return nil, overwatch.ErrNotImplemented
+	return m.fetchOrgProjects(), nil
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
 	return nil, overwatch.ErrNotImplemented
 }
 
-func (m *manager) fetchOrgProjects() []*project {
+func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 	opt := &gogithub.RepositoryListByOrgOptions{
 		ListOptions: gogithub.ListOptions{
 			PerPage: 64,
 		},
 	}
-	var allRepos []*project
+	var allRepos []overwatch.IamResource
 	for {
 		repos, resp, err := m.client.Repositories.ListByOrg(context.Background(), m.organisation, opt)
 		if err != nil {
@@ -78,7 +77,7 @@ func (m *manager) fetchOrgProjects() []*project {
 				Protected: []string{},
 			}
 			branches, _, err := m.client.Repositories.ListBranches(context.Background(),
-				pro.GetOwner().GetName(),
+				pro.GetOwner().GetLogin(),
 				pro.GetName(),
 				&gogithub.ListOptions{})
 			if err != nil {

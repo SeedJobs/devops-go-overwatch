@@ -23,6 +23,7 @@ func DefaultManager() *Manager {
 }
 
 func (m *Manager) Readconfig(conf overwatch.IamManagerConfig) error {
+	m.Conf = &conf
 	// Load the configuration needed to interact with Github
 	m.Expire = m.Expire.Add(conf.TimeOut)
 	synchroType, defined := m.Conf.Additional["Synchro"].(string)
