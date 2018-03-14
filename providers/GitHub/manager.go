@@ -58,3 +58,42 @@ func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
 	return nil, overwatch.ErrNotImplemented
 }
+
+func (m *manager) fetchOrgProjects() []*project {
+	opt := &gogithub.RepositoryListByOrgOptions{
+		ListOptions: gogithub.ListOptions{PerPage: 10},
+	}
+	var allRepos []*project
+	for {
+		repos, resp, err := m.client.Repositories.ListByOrg(context.Background(), m.organisation, opt)
+		if err != nil {
+			panic(err)
+		}
+		for _, pro := range repos {
+			repo := &project{
+				Name:      pro.GetName(),
+				Public:    !pro.GetPrivate(),
+				Protected: []string{},
+			}
+			// Found out all protected Branches
+			branches, _, err := m.client.Repositories.ListBranches(context.Background(),
+				pro.GetOwner().GetName(),
+				pro.GetName(),
+				&gogithub.ListOptions{})
+			if err != nil {
+				panic(err)
+			}
+			for _, branch := range branches {
+				if branch.GetProtected() {
+					repo.Protected = append(repo.Protected, branch.GetName())
+				}
+			}
+			allRepos = append(allRepos, repo)
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return allRepos
+}
