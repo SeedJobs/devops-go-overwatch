@@ -3,12 +3,16 @@ package github
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"path"
+	"regexp"
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
 	gogithub "github.com/google/go-github/github"
 	"golang.org/x/oauth2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type manager struct {
@@ -65,6 +69,7 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 	}
 	var allRepos []overwatch.IamResource
 	for {
+		// This call is limited by the token issuer as it can only see what the issuer can see inside the org
 		repos, resp, err := m.client.Repositories.ListByOrg(context.Background(), m.organisation, opt)
 		if err != nil {
 			panic(err)
@@ -95,4 +100,26 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 		opt.Page = resp.NextPage
 	}
 	return allRepos
+}
+
+func (m *manager) readFiles(directory string) {
+	files, err := ioutil.ReadDir(directory)
+	if err != nil {
+		panic(err)
+	}
+	for _, file := range files {
+		if !regexp.MustCompile("^.*\\.y?ml$").MatchString(file.Name()) {
+			continue
+		}
+		filepath := path.Join(directory, file.Name())
+		buff, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			panic(err)
+		}
+		var projects []project
+		if err = yaml.Unmarshal(buff, &projects); err != nil {
+			panic(err)
+		}
+
+	}
 }
