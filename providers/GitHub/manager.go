@@ -31,7 +31,6 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	// Configure and store resources that are needed for the Client
 	var authclient *http.Client = nil
 	if token, exist := conf.Additional["GITHUB_TOKEN"].(string); exist {
-		fmt.Println("Using token")
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)

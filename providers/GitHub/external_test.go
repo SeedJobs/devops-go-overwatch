@@ -48,18 +48,21 @@ func TestQuerryingProjects(t *testing.T) {
 		t.Fatal("Unable to create manager")
 	}
 	keypath := fmt.Sprintf("%s/.ssh/id_rsa", os.Getenv("HOME"))
+	clonedir := "test/"
 	err = man.LoadConfiguration(overwatch.IamManagerConfig{
 		GitLocation: GitRepository,
 		Additional: map[string]interface{}{
 			"GITHUB_TOKEN": GitHubEnv,
 			"GITHUB_ORG":   GithubOrg,
 			"Synchro":      "git",
+			"Location":     clonedir,
 			"auth": map[string]string{
 				"Type":     "ssh",
 				"Key-Path": keypath,
 			},
 		},
 	})
+	defer os.RemoveAll(clonedir)
 	if err != nil {
 		t.Log("Unable to init Manager")
 		t.Fatal(err)
