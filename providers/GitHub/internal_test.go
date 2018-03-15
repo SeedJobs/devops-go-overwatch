@@ -2,6 +2,8 @@ package github
 
 import (
 	"testing"
+
+	overwatch "github.com/SeedJobs/devops-go-overwatch"
 )
 
 func TestLoadResourcesFromDisk(t *testing.T) {
@@ -11,7 +13,9 @@ func TestLoadResourcesFromDisk(t *testing.T) {
 			t.Fatal("Recovered in f", r)
 		}
 	}()
-	collection := readFiles(filepath, []project{})
+	collection := readFiles(filepath, func(buff []byte) []overwatch.IamResource {
+		return nil
+	})
 	if len(collection) == 0 {
 		t.Fatal("Expected data to be read from", filepath)
 	}
