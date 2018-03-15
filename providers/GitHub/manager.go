@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"regexp"
 
@@ -102,24 +103,38 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 	return allRepos
 }
 
-func (m *manager) readFiles(directory string) {
-	files, err := ioutil.ReadDir(directory)
+// readFiles takes a directory and an implemented buffer of an Overwatch IAM Resources
+// then return a collection.
+func readFiles(dir string, resource interface{}) []overwatch.IamResource {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		panic(fmt.Errorf("Unable to load file %s, %v", dir, err))
+	}
+	collection := []overwatch.IamResource{}
+	filecollection, err := ioutil.ReadDir(dir)
 	if err != nil {
 		panic(err)
 	}
-	for _, file := range files {
+	for _, file := range filecollection {
+		// Only process files that we expect
 		if !regexp.MustCompile("^.*\\.y?ml$").MatchString(file.Name()) {
 			continue
 		}
-		filepath := path.Join(directory, file.Name())
+		filepath := path.Join(dir, file.Name())
 		buff, err := ioutil.ReadFile(filepath)
 		if err != nil {
 			panic(err)
 		}
-		var projects []project
-		if err = yaml.Unmarshal(buff, &projects); err != nil {
+		// Create a copy of the buffer be passed to ensure we don't
+		// have duplicated data
+		tmpbuf := resource
+		if err = yaml.Unmarshal(buff, &tmpbuf); err != nil {
 			panic(err)
 		}
-
+		castbuf, ok := tmpbuf.([]overwatch.IamResource)
+		if !ok {
+			panic("Can not cast to IamResource")
+		}
+		collection = append(collection, castbuf...)
 	}
+	return collection
 }
