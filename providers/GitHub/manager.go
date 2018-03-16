@@ -19,6 +19,7 @@ type manager struct {
 	organisation string
 	client       *gogithub.Client
 	store        *abstract.Manager
+	resources    []overwatch.IamResource
 }
 
 func NewManager() (overwatch.IamPolicyManager, error) {
@@ -46,6 +47,12 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	} else {
 		return fmt.Errorf("GITHUB_ORG was not defined in conf additional map")
 	}
+	dir := path.Join(m.store.Storer.GetPath(), m.organisation, "Repos")
+	loaded, err := readFiles(dir, projectTransformer)
+	if err != nil {
+		return err
+	}
+	m.resources = append(m.resources, loaded...)
 	return nil
 }
 
@@ -102,14 +109,14 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 	return allRepos
 }
 
-func readFiles(dir string, transformer func([]byte) []overwatch.IamResource) []overwatch.IamResource {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		panic(fmt.Errorf("Unable to load file %s, %v", dir, err))
+func readFiles(dir string, transformer func([]byte) []overwatch.IamResource) ([]overwatch.IamResource, error) {
+	if f, err := os.Stat(dir); os.IsNotExist(err) && (f != nil && !f.IsDir()) {
+		return nil, fmt.Errorf("Unable to load directory %s, %v", dir, err)
 	}
 	collection := []overwatch.IamResource{}
 	filecollection, err := ioutil.ReadDir(dir)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	for _, file := range filecollection {
 		// Only process files that we expect
@@ -119,9 +126,9 @@ func readFiles(dir string, transformer func([]byte) []overwatch.IamResource) []o
 		filepath := path.Join(dir, file.Name())
 		buff, err := ioutil.ReadFile(filepath)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		collection = append(collection, transformer(buff)...)
 	}
-	return collection
+	return collection, nil
 }

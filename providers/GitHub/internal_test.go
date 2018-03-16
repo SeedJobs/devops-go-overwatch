@@ -6,12 +6,10 @@ import (
 
 func TestLoadResourcesFromDisk(t *testing.T) {
 	filepath := "./test_data/"
-	go func() {
-		if r := recover(); r != nil {
-			t.Fatal("Recovered in f", r)
-		}
-	}()
-	collection := readFiles(filepath, projectTransformer)
+	collection, err := readFiles(filepath, projectTransformer)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(collection) == 0 {
 		t.Fatal("Expected data to be read from", filepath)
 	}
