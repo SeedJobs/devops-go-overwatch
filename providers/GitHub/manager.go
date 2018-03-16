@@ -13,7 +13,6 @@ import (
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
 	gogithub "github.com/google/go-github/github"
 	"golang.org/x/oauth2"
-	yaml "gopkg.in/yaml.v2"
 )
 
 type manager struct {
@@ -76,7 +75,7 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 			panic(err)
 		}
 		for _, pro := range repos {
-			repo := &project{
+			repo := project{
 				Name:      pro.GetName(),
 				Public:    !pro.GetPrivate(),
 				Protected: []string{},
@@ -103,9 +102,7 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 	return allRepos
 }
 
-// readFiles takes a directory and an implemented buffer of an Overwatch IAM Resources
-// then return a collection.
-func readFiles(dir string, resource interface{}) []overwatch.IamResource {
+func readFiles(dir string, transformer func([]byte) []overwatch.IamResource) []overwatch.IamResource {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		panic(fmt.Errorf("Unable to load file %s, %v", dir, err))
 	}
@@ -116,7 +113,7 @@ func readFiles(dir string, resource interface{}) []overwatch.IamResource {
 	}
 	for _, file := range filecollection {
 		// Only process files that we expect
-		if !regexp.MustCompile("^.*\\.y?ml$").MatchString(file.Name()) {
+		if !regexp.MustCompile("^.*\\.(yaml|yml)$").MatchString(file.Name()) {
 			continue
 		}
 		filepath := path.Join(dir, file.Name())
@@ -124,17 +121,7 @@ func readFiles(dir string, resource interface{}) []overwatch.IamResource {
 		if err != nil {
 			panic(err)
 		}
-		// Create a copy of the buffer be passed to ensure we don't
-		// have duplicated data
-		tmpbuf := resource
-		if err = yaml.Unmarshal(buff, &tmpbuf); err != nil {
-			panic(err)
-		}
-		castbuf, ok := tmpbuf.([]overwatch.IamResource)
-		if !ok {
-			panic("Can not cast to IamResource")
-		}
-		collection = append(collection, castbuf...)
+		collection = append(collection, transformer(buff)...)
 	}
 	return collection
 }

@@ -5,13 +5,13 @@ import (
 )
 
 func TestLoadResourcesFromDisk(t *testing.T) {
-	filepath := "test_data/users.yaml"
+	filepath := "./test_data/"
 	go func() {
 		if r := recover(); r != nil {
 			t.Fatal("Recovered in f", r)
 		}
 	}()
-	collection := readFiles(filepath, []project{})
+	collection := readFiles(filepath, projectTransformer)
 	if len(collection) == 0 {
 		t.Fatal("Expected data to be read from", filepath)
 	}
