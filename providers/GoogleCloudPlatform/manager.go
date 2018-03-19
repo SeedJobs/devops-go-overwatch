@@ -12,8 +12,8 @@ import (
 
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
-	"github.com/SeedJobs/devops-go-overwatch/synchro"
-	"github.com/SeedJobs/devops-go-overwatch/synchro/git"
+	"github.com/SeedJobs/devops-go-synchro"
+	"github.com/SeedJobs/devops-go-synchro/git"
 	"google.golang.org/api/iterator"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
 	yaml "gopkg.in/yaml.v2"
