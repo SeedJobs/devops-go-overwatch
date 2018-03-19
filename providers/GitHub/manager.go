@@ -72,9 +72,26 @@ func (m *manager) Resources() []overwatch.IamResource {
 	return collection
 }
 
+// ListModifiedResources will examine resources loaded from Github and check
+// them against the expected store configuration.
 func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
-
-	return m.fetchOrgProjects(), nil
+	modified := []overwatch.IamResource{}
+	for _, obj := range m.fetchOrgProjects() {
+		// early exit if possible
+		if _, exist := m.resources[obj.GetType()]; !exist {
+			break
+		}
+		// Check if our stored config matches what is contained
+		// inside the current resource
+		store, exist := m.resources[obj.GetType()][obj.GetName()]
+		switch {
+		case !exist:
+			// Nothing to do
+		case store != obj:
+			modified = append(modified, obj)
+		}
+	}
+	return modified, nil
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
