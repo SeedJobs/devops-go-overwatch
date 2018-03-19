@@ -14,9 +14,9 @@ import (
 )
 
 type manager struct {
+	base         *abstract.Manager
 	organisation string
 	client       *gogithub.Client
-	base         *abstract.Manager
 	resources    map[string]map[string]overwatch.IamResource
 }
 
