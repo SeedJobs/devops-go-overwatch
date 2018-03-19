@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
@@ -48,7 +49,8 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	} else {
 		return fmt.Errorf("GITHUB_ORG was not defined in conf additional map")
 	}
-	dir := path.Join(m.store.Storer.GetPath(), m.organisation, "Repos")
+	// Directory is made up of "path/<Provider>/<Organisation>/<ResourceType>/*.ya?ml"
+	dir := path.Join(m.store.Storer.GetPath(), "Github", m.organisation, "Repos")
 	loaded, err := readFiles(dir, projectTransformer)
 	if err != nil {
 		return err
@@ -86,8 +88,9 @@ func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
 		store, exist := m.resources[obj.GetType()][obj.GetName()]
 		switch {
 		case !exist:
-			// Nothing to do
-		case store != obj:
+			// Do nothing
+		// Had to use DeepEqualto as the standard equal just simply doesn't work in this case
+		case !reflect.DeepEqual(store, obj):
 			modified = append(modified, obj)
 		}
 	}
