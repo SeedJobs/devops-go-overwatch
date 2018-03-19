@@ -10,8 +10,8 @@ import (
 	"time"
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
-	"github.com/SeedJobs/devops-go-overwatch/synchro"
-	"github.com/SeedJobs/devops-go-overwatch/synchro/git"
+	"github.com/SeedJobs/devops-go-synchro"
+	"github.com/SeedJobs/devops-go-synchro/git"
 )
 
 type Manager struct {
