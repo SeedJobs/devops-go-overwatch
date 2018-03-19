@@ -89,7 +89,7 @@ func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
 		switch {
 		case !exist:
 			// Do nothing
-		// Had to use DeepEqualto as the standard equal just simply doesn't work in this case
+		// Had to use DeepEqual as the standard equal just simply doesn't work in this case
 		case !reflect.DeepEqual(store, obj):
 			modified = append(modified, obj)
 		}
