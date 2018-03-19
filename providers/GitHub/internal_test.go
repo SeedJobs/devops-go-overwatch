@@ -2,11 +2,13 @@ package github
 
 import (
 	"testing"
+
+	"github.com/SeedJobs/devops-go-overwatch/providers/default"
 )
 
 func TestLoadResourcesFromDisk(t *testing.T) {
 	filepath := "./test_data/"
-	collection, err := readFiles(filepath, projectTransformer)
+	collection, err := abstract.ReadFiles(filepath, projectTransformer)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,12 +3,9 @@ package github
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"path"
 	"reflect"
-	"regexp"
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
@@ -19,20 +16,20 @@ import (
 type manager struct {
 	organisation string
 	client       *gogithub.Client
-	store        *abstract.Manager
+	base         *abstract.Manager
 	resources    map[string]map[string]overwatch.IamResource
 }
 
 func NewManager() (overwatch.IamPolicyManager, error) {
 	return &manager{
-		store:     abstract.DefaultManager(),
+		base:      abstract.DefaultManager(),
 		resources: map[string]map[string]overwatch.IamResource{},
 	}, nil
 }
 
 func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	// Read all the Manager default configurations
-	if err := m.store.Readconfig(conf); err != nil {
+	if err := m.base.Readconfig(conf); err != nil {
 		return err
 	}
 	// Configure and store resources that are needed for the Client
@@ -50,8 +47,8 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 		return fmt.Errorf("GITHUB_ORG was not defined in conf additional map")
 	}
 	// Directory is made up of "path/<Provider>/<Organisation>/<ResourceType>/*.ya?ml"
-	dir := path.Join(m.store.Storer.GetPath(), "Github", m.organisation, "Repos")
-	loaded, err := readFiles(dir, projectTransformer)
+	dir := path.Join(m.base.Storer.GetPath(), "Github", m.organisation, "Repos")
+	loaded, err := abstract.ReadFiles(dir, projectTransformer)
 	if err != nil {
 		return err
 	}
@@ -140,28 +137,4 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 		opt.Page = resp.NextPage
 	}
 	return allRepos
-}
-
-func readFiles(dir string, transformer func([]byte) []overwatch.IamResource) ([]overwatch.IamResource, error) {
-	if f, err := os.Stat(dir); os.IsNotExist(err) && (f != nil && !f.IsDir()) {
-		return nil, fmt.Errorf("Unable to load directory %s, %v", dir, err)
-	}
-	collection := []overwatch.IamResource{}
-	filecollection, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range filecollection {
-		// Only process files that we expect
-		if !regexp.MustCompile("^.*\\.(yaml|yml)$").MatchString(file.Name()) {
-			continue
-		}
-		filepath := path.Join(dir, file.Name())
-		buff, err := ioutil.ReadFile(filepath)
-		if err != nil {
-			return nil, err
-		}
-		collection = append(collection, transformer(buff)...)
-	}
-	return collection, nil
 }

@@ -2,6 +2,10 @@ package abstract
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -58,4 +62,28 @@ func (m *Manager) Readconfig(conf overwatch.IamManagerConfig) error {
 		return err
 	}
 	return nil
+}
+
+func ReadFiles(dir string, transformer func([]byte) []overwatch.IamResource) ([]overwatch.IamResource, error) {
+	if f, err := os.Stat(dir); os.IsNotExist(err) && (f != nil && !f.IsDir()) {
+		return nil, fmt.Errorf("Unable to load directory %s, %v", dir, err)
+	}
+	collection := []overwatch.IamResource{}
+	filecollection, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, file := range filecollection {
+		// Only process files that we expect
+		if !regexp.MustCompile("^.*\\.(yaml|yml)$").MatchString(file.Name()) {
+			continue
+		}
+		filepath := path.Join(dir, file.Name())
+		buff, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			return nil, err
+		}
+		collection = append(collection, transformer(buff)...)
+	}
+	return collection, nil
 }

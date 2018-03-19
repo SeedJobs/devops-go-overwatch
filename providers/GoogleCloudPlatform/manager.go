@@ -7,23 +7,19 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"strings"
 	"time"
 
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
-	"github.com/SeedJobs/devops-go-overwatch/synchro"
-	"github.com/SeedJobs/devops-go-overwatch/synchro/git"
+	"github.com/SeedJobs/devops-go-overwatch/providers/default"
 	"google.golang.org/api/iterator"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type cloudIamManager struct {
+	base      *abstract.Manager
 	Project   string
-	expire    time.Time
-	conf      *overwatch.IamManagerConfig
-	storer    synchro.Store
 	resources map[string]overwatch.IamResource
 }
 
@@ -31,48 +27,18 @@ func NewManager() (overwatch.IamPolicyManager, error) {
 	return &cloudIamManager{
 		// This will enforce that any operation that depends on expire to happen
 		// straight away as no data would have been loaded
-		expire:    time.Now(),
+		base:      abstract.DefaultManager(),
 		resources: map[string]overwatch.IamResource{},
 	}, nil
 }
 
 func (m *cloudIamManager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
-	m.expire = m.expire.Add(conf.TimeOut)
 	project, ok := conf.Additional["Project"].(string)
 	if !ok {
 		return fmt.Errorf("Unable to convert Project from Additional to a string")
 	}
 	m.Project = project
-	m.conf = &conf
-	synchroType, defined := m.conf.Additional["Synchro"].(string)
-	if !defined {
-		return fmt.Errorf("Unable to find required Synchro listing inside additional map")
-	}
-	switch strings.ToLower(synchroType) {
-	case "git":
-		inf := synchro.Information{
-			RemoteURL:  conf.GitLocation,
-			Additional: conf.Additional,
-		}
-		if branch, ok := conf.Additional["Branch"].(string); ok {
-			inf.Branch = branch
-		} else {
-			inf.Branch = "master"
-		}
-		if location, ok := conf.Additional["Location"].(string); ok {
-			inf.Location = location
-		} else {
-			inf.Location = conf.GitLocation
-		}
-		storer, err := git.NewSynchro(inf)
-		if err != nil {
-			return err
-		}
-		m.storer = storer
-	}
-	// As we don't have any data currently stored inside the Manager,
-	// Knowning if it had updated is not important
-	if _, err := m.storer.Synced(); err != nil {
+	if err := m.base.Readconfig(conf); err != nil {
 		return err
 	}
 	return m.loadFromDisc()
@@ -88,7 +54,7 @@ func (m *cloudIamManager) Resources() []overwatch.IamResource {
 }
 
 func (m *cloudIamManager) ListModifiedResources() ([]overwatch.IamResource, error) {
-	if m.storer == nil {
+	if m.base.Storer == nil {
 		return nil, fmt.Errorf("Unable to load local resources due to misconfigured manager")
 	}
 	if err := m.update(); err != nil {
@@ -146,7 +112,7 @@ func (m *cloudIamManager) loadFromDisc() error {
 	}
 	load := func(folder string) (userCollection, error) {
 		var folderpath string
-		folderpath = path.Join(m.storer.GetPath(), "GoogleCloudPlatform/Project", m.Project, folder)
+		folderpath = path.Join(m.base.Storer.GetPath(), "GoogleCloudPlatform/Project", m.Project, folder)
 		if _, err := os.Stat(folderpath); os.IsNotExist(err) {
 			return nil, fmt.Errorf("The folder %s does not exist", folderpath)
 		}
@@ -186,11 +152,11 @@ func (m *cloudIamManager) loadFromDisc() error {
 }
 
 func (m *cloudIamManager) update() error {
-	if time.Now().After(m.expire) {
-		if m.storer == nil {
+	if time.Now().After(m.base.Expire) {
+		if m.base.Storer == nil {
 			return fmt.Errorf("Storer is undefined")
 		}
-		updated, err := m.storer.Synced()
+		updated, err := m.base.Storer.Synced()
 		switch {
 		case err != nil:
 			return err
@@ -200,7 +166,7 @@ func (m *cloudIamManager) update() error {
 			}
 		}
 		// Update the expired time
-		m.expire = time.Now().Add(m.conf.TimeOut)
+		m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
 	}
 	return nil
 }
