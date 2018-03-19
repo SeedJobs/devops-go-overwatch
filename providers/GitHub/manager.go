@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path"
 	"reflect"
+	"time"
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
@@ -46,19 +47,7 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	} else {
 		return fmt.Errorf("GITHUB_ORG was not defined in conf additional map")
 	}
-	// Directory is made up of "path/<Provider>/<Organisation>/<ResourceType>/*.ya?ml"
-	dir := path.Join(m.base.Storer.GetPath(), "Github", m.organisation, "Repos")
-	loaded, err := abstract.ReadFiles(dir, projectTransformer)
-	if err != nil {
-		return err
-	}
-	for _, obj := range loaded {
-		if _, ok := m.resources[obj.GetType()]; !ok {
-			m.resources[obj.GetType()] = map[string]overwatch.IamResource{}
-		}
-		m.resources[obj.GetType()][obj.GetName()] = obj
-	}
-	return nil
+	return m.readFromDisc()
 }
 
 func (m *manager) Resources() []overwatch.IamResource {
@@ -95,7 +84,19 @@ func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
-	return nil, overwatch.ErrNotImplemented
+	if time.Now().After(m.base.Expire) {
+		// Test to see if we need to write our cache to disk
+
+		// Remove items for the internal cache
+		for key, _ := range m.resources {
+			delete(m.resources, key)
+		}
+		if err := m.readFromDisc(); err != nil {
+			return nil, err
+		}
+	}
+	m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
+	return m.ListModifiedResources()
 }
 
 func (m *manager) fetchOrgProjects() []overwatch.IamResource {
@@ -137,4 +138,20 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 		opt.Page = resp.NextPage
 	}
 	return allRepos
+}
+
+func (m *manager) readFromDisc() error {
+	// Directory is made up of "path/<Provider>/<Organisation>/<ResourceType>/*.ya?ml"
+	dir := path.Join(m.base.Storer.GetPath(), "Github", m.organisation, "Repos")
+	loaded, err := abstract.ReadFiles(dir, projectTransformer)
+	if err != nil {
+		return err
+	}
+	for _, obj := range loaded {
+		if _, ok := m.resources[obj.GetType()]; !ok {
+			m.resources[obj.GetType()] = map[string]overwatch.IamResource{}
+		}
+		m.resources[obj.GetType()][obj.GetName()] = obj
+	}
+	return nil
 }
