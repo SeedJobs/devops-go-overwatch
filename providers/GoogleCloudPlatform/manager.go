@@ -3,10 +3,7 @@ package google
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path"
-	"regexp"
 	"time"
 
 	admin "cloud.google.com/go/iam/admin/apiv1"
@@ -14,7 +11,6 @@ import (
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
 	"google.golang.org/api/iterator"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
-	yaml "gopkg.in/yaml.v2"
 )
 
 type cloudIamManager struct {
@@ -110,41 +106,13 @@ func (m *cloudIamManager) loadFromDisc() error {
 	for item, _ := range m.resources {
 		delete(m.resources, item)
 	}
-	load := func(folder string) (userCollection, error) {
-		var folderpath string
-		folderpath = path.Join(m.base.Storer.GetPath(), "GoogleCloudPlatform/Project", m.Project, folder)
-		if _, err := os.Stat(folderpath); os.IsNotExist(err) {
-			return nil, fmt.Errorf("The folder %s does not exist", folderpath)
-		}
-		filelist, err := ioutil.ReadDir(folderpath)
-		if err != nil {
-			return nil, err
-		}
-		var globalitems userCollection
-		for _, file := range filelist {
-			// Only loading files that have yaml extensions
-			matched, _ := regexp.MatchString("^.*\\.([Yy]aml|[Yy]ml)$", file.Name())
-			if matched {
-				buf, err := ioutil.ReadFile(path.Join(folderpath, file.Name()))
-				if err != nil {
-					return nil, err
-				}
-				var items userCollection
-				if err = yaml.Unmarshal(buf, &items); err != nil {
-					return nil, err
-				}
-				globalitems = append(globalitems, items...)
-			}
-		}
-		return globalitems, nil
-	}
-	serviceaccounts, err := load("ServiceAccounts")
+	dir := path.Join(m.base.Storer.GetPath(), "GoogleCloudPlatform/Project", m.Project, "ServiceAcccount")
+	serviceaccounts, err := abstract.ReadFiles(dir, userAccountTransformer)
 	if err != nil {
 		return err
 	}
 	for _, resource := range serviceaccounts {
-		resource.Type = "ServiceAccount"
-		m.resources[resource.Email] = resource
+		m.resources[resource.GetName()] = resource
 	}
 	// Load Members from disc
 	// Load Roles from disc
