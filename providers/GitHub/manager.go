@@ -19,12 +19,13 @@ type manager struct {
 	organisation string
 	client       *gogithub.Client
 	store        *abstract.Manager
-	resources    []overwatch.IamResource
+	resources    map[string]map[string]overwatch.IamResource
 }
 
 func NewManager() (overwatch.IamPolicyManager, error) {
 	return &manager{
-		store: abstract.DefaultManager(),
+		store:     abstract.DefaultManager(),
+		resources: map[string]map[string]overwatch.IamResource{},
 	}, nil
 }
 
@@ -52,15 +53,27 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	if err != nil {
 		return err
 	}
-	m.resources = append(m.resources, loaded...)
+	for _, obj := range loaded {
+		if _, ok := m.resources[obj.GetType()]; !ok {
+			m.resources[obj.GetType()] = map[string]overwatch.IamResource{}
+		}
+		m.resources[obj.GetType()][obj.GetName()] = obj
+	}
 	return nil
 }
 
 func (m *manager) Resources() []overwatch.IamResource {
-	return nil
+	collection := []overwatch.IamResource{}
+	for _, dict := range m.resources {
+		for _, obj := range dict {
+			collection = append(collection, obj)
+		}
+	}
+	return collection
 }
 
 func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
+
 	return m.fetchOrgProjects(), nil
 }
 
