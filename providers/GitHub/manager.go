@@ -172,3 +172,22 @@ func (m *manager) readFromDisc() error {
 	}
 	return nil
 }
+
+func (m *manager) seperateLists(collection []overwatch.IamResource) ([]overwatch.IamResource, []overwatch.IamResource) {
+	notcached, modified := []overwatch.IamResource{}, []overwatch.IamResource{}
+	for _, item := range collection {
+		if _, exist := m.resources[item.GetType()]; !exist {
+			notcached = append(notcached, item)
+			// early exit on the loop
+			continue
+		}
+		obj, exist := m.resources[item.GetType()][item.GetName()]
+		switch {
+		case !exist:
+			notcached = append(notcached, item)
+		case !reflect.DeepEqual(item, obj):
+			modified = append(modified, item)
+		}
+	}
+	return notcached, modified
+}
