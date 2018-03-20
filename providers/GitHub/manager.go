@@ -89,7 +89,16 @@ func (m *manager) Resync() ([]overwatch.IamResource, error) {
 		// Test to see if we need to write our cache to disk
 		collection, err := m.ListModifiedResources()
 		for _, obj := range collection {
-			_ = obj
+			if _, exist := m.resources[obj.GetType()]; !exist {
+				continue
+			}
+			cached, exist := m.resources[obj.GetType()][obj.GetName()]
+			switch {
+			case !exist:
+				// Should write the object to disk as is
+			case !reflect.DeepEqual(cached, obj):
+				// The object has changed since we last cached it
+			}
 		}
 		if err = m.readFromDisc(); err != nil {
 			return nil, err
