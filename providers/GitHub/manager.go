@@ -85,27 +85,31 @@ func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
+	items := []overwatch.IamResource{}
 	if time.Now().After(m.base.Expire) {
+		toDisc := []overwatch.IamResource{}
 		// Test to see if we need to write our cache to disk
 		collection, err := m.ListModifiedResources()
 		for _, obj := range collection {
 			if _, exist := m.resources[obj.GetType()]; !exist {
-				continue
+				toDisc = append(toDisc, obj)
 			}
 			cached, exist := m.resources[obj.GetType()][obj.GetName()]
 			switch {
 			case !exist:
 				// Should write the object to disk as is
+				toDisc = append(toDisc, obj)
 			case !reflect.DeepEqual(cached, obj):
 				// The object has changed since we last cached it
+				items = append(items, obj)
 			}
 		}
 		if err = m.readFromDisc(); err != nil {
 			return nil, err
 		}
+		m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
 	}
-	m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
-	return nil, nil
+	return items, nil
 }
 
 func (m *manager) fetchOrgProjects() []overwatch.IamResource {
