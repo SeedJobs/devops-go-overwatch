@@ -12,6 +12,7 @@ import (
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
 	gogithub "github.com/google/go-github/github"
 	"golang.org/x/oauth2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type manager struct {
@@ -47,7 +48,7 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	} else {
 		return fmt.Errorf("GITHUB_ORG was not defined in conf additional map")
 	}
-	return m.readFromDisc()
+	return m.readFromDisk()
 }
 
 func (m *manager) Resources() []overwatch.IamResource {
@@ -63,50 +64,24 @@ func (m *manager) Resources() []overwatch.IamResource {
 // ListModifiedResources will examine resources loaded from Github and check
 // them against the expected store configuration.
 func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
-	modified := []overwatch.IamResource{}
-	for _, obj := range m.fetchOrgProjects() {
-		// early exit if possible
-		if _, exist := m.resources[obj.GetType()]; !exist {
-			break
-		}
-		// Check if our stored config matches what is contained
-		// inside the current resource
-		store, exist := m.resources[obj.GetType()][obj.GetName()]
-		switch {
-		case !exist:
-			modified = append(modified, obj)
-		// Had to use DeepEqual as the standard equal just simply doesn't work in this case
-		// causes the code to panic
-		case !reflect.DeepEqual(store, obj):
-			modified = append(modified, obj)
-		}
-	}
-	return m.Resources(), nil
+	notcached, modified := m.seperateLists(m.fetchOrgProjects())
+	return append(notcached, modified...), nil
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
 	items := []overwatch.IamResource{}
 	if time.Now().After(m.base.Expire) {
-		toDisc := []overwatch.IamResource{}
-		// Test to see if we need to write our cache to disk
-		collection, err := m.ListModifiedResources()
-		for _, obj := range collection {
-			if _, exist := m.resources[obj.GetType()]; !exist {
-				toDisc = append(toDisc, obj)
+		notcached, modified := m.seperateLists(m.fetchOrgProjects())
+		for _, item := range notcached {
+			if _, exist := m.resources[item.GetType()]; !exist {
+				m.resources[item.GetType()] = map[string]overwatch.IamResource{}
 			}
-			cached, exist := m.resources[obj.GetType()][obj.GetName()]
-			switch {
-			case !exist:
-				// Should write the object to disk as is
-				toDisc = append(toDisc, obj)
-			case !reflect.DeepEqual(cached, obj):
-				// The object has changed since we last cached it
-				items = append(items, obj)
-			}
+			m.resources[item.GetType()][item.GetName()] = item
 		}
-		if err = m.readFromDisc(); err != nil {
+		if err := m.writeToDisk(); err != nil {
 			return nil, err
 		}
+		items = append(items, modified...)
 		m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
 	}
 	return items, nil
@@ -153,7 +128,26 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 	return allRepos
 }
 
-func (m *manager) readFromDisc() error {
+func (m *manager) seperateLists(collection []overwatch.IamResource) ([]overwatch.IamResource, []overwatch.IamResource) {
+	notcached, modified := []overwatch.IamResource{}, []overwatch.IamResource{}
+	for _, item := range collection {
+		if _, exist := m.resources[item.GetType()]; !exist {
+			notcached = append(notcached, item)
+			// early exit on the loop
+			continue
+		}
+		obj, exist := m.resources[item.GetType()][item.GetName()]
+		switch {
+		case !exist:
+			notcached = append(notcached, item)
+		case !reflect.DeepEqual(item, obj):
+			modified = append(modified, item)
+		}
+	}
+	return notcached, modified
+}
+
+func (m *manager) readFromDisk() error {
 	// Remove items for the internal cache
 	for key, _ := range m.resources {
 		delete(m.resources, key)
@@ -173,21 +167,19 @@ func (m *manager) readFromDisc() error {
 	return nil
 }
 
-func (m *manager) seperateLists(collection []overwatch.IamResource) ([]overwatch.IamResource, []overwatch.IamResource) {
-	notcached, modified := []overwatch.IamResource{}, []overwatch.IamResource{}
-	for _, item := range collection {
-		if _, exist := m.resources[item.GetType()]; !exist {
-			notcached = append(notcached, item)
-			// early exit on the loop
-			continue
+func (m *manager) writeToDisk() error {
+	for key, items := range m.resources {
+		dir := path.Join(m.base.Storer.GetPath(), "Github", m.organisation, key+"s")
+		data := []overwatch.IamResource{}
+		for _, obj := range items {
+			data = append(data, obj)
 		}
-		obj, exist := m.resources[item.GetType()][item.GetName()]
-		switch {
-		case !exist:
-			notcached = append(notcached, item)
-		case !reflect.DeepEqual(item, obj):
-			modified = append(modified, item)
+		buff, err := yaml.Marshal(&data)
+		if err != nil {
+			return err
 		}
+		_ = buff
+		_ = dir
 	}
-	return notcached, modified
+	return nil
 }
