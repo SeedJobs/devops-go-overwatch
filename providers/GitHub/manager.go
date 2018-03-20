@@ -87,10 +87,6 @@ func (m *manager) Resync() ([]overwatch.IamResource, error) {
 	if time.Now().After(m.base.Expire) {
 		// Test to see if we need to write our cache to disk
 
-		// Remove items for the internal cache
-		for key, _ := range m.resources {
-			delete(m.resources, key)
-		}
 		if err := m.readFromDisc(); err != nil {
 			return nil, err
 		}
@@ -141,6 +137,10 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 }
 
 func (m *manager) readFromDisc() error {
+	// Remove items for the internal cache
+	for key, _ := range m.resources {
+		delete(m.resources, key)
+	}
 	// Directory is made up of "path/<Provider>/<Organisation>/<ResourceType>/*.ya?ml"
 	dir := path.Join(m.base.Storer.GetPath(), "Github", m.organisation, "Repos")
 	loaded, err := abstract.ReadFiles(dir, projectTransformer)
