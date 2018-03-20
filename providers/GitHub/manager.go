@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"path"
 	"reflect"
@@ -178,8 +179,10 @@ func (m *manager) writeToDisk() error {
 		if err != nil {
 			return err
 		}
-		_ = buff
-		_ = dir
+		f := path.Join(dir, key+".yml")
+		if err := ioutil.WriteFile(f, buff, 0644); err != nil {
+			return err
+		}
 	}
 	return nil
 }
