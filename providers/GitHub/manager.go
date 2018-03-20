@@ -74,25 +74,29 @@ func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
 		store, exist := m.resources[obj.GetType()][obj.GetName()]
 		switch {
 		case !exist:
-			// Do nothing
+			modified = append(modified, obj)
 		// Had to use DeepEqual as the standard equal just simply doesn't work in this case
+		// causes the code to panic
 		case !reflect.DeepEqual(store, obj):
 			modified = append(modified, obj)
 		}
 	}
-	return modified, nil
+	return m.Resources(), nil
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
 	if time.Now().After(m.base.Expire) {
 		// Test to see if we need to write our cache to disk
-
-		if err := m.readFromDisc(); err != nil {
+		collection, err := m.ListModifiedResources()
+		for _, obj := range collection {
+			_ = obj
+		}
+		if err = m.readFromDisc(); err != nil {
 			return nil, err
 		}
 	}
 	m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
-	return m.ListModifiedResources()
+	return nil, nil
 }
 
 func (m *manager) fetchOrgProjects() []overwatch.IamResource {
