@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"reflect"
 	"time"
@@ -180,6 +181,11 @@ func (m *manager) writeToDisk() error {
 			return err
 		}
 		f := path.Join(dir, key+".yml")
+		// Removing any old file as need just to remove it
+		if _, err := os.Stat(f); !os.IsNotExist(err) {
+			os.Remove(f)
+		}
+		// Write the updated file
 		if err := ioutil.WriteFile(f, buff, 0644); err != nil {
 			return err
 		}
