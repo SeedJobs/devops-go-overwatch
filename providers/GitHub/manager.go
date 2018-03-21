@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"path"
 	"reflect"
-	"time"
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
@@ -84,15 +83,7 @@ func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
-	if time.Now().After(m.base.Expire) {
-		// Test to see if we need to write our cache to disk
-
-		if err := m.readFromDisc(); err != nil {
-			return nil, err
-		}
-	}
-	m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
-	return m.ListModifiedResources()
+	return nil, overwatch.ErrNotImplemented
 }
 
 func (m *manager) fetchOrgProjects() []overwatch.IamResource {
