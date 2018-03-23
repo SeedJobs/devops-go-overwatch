@@ -1,0 +1,9 @@
+---
+-
+  Name: testProject
+  Protected:
+    - master
+  Public: false
+  Teams:
+    - NotNice
+    - awesomesauce
