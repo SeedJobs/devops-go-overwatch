@@ -50,6 +50,9 @@ func (m *Manager) Readconfig(conf overwatch.IamManagerConfig) error {
 		} else {
 			inf.Location = conf.GitLocation
 		}
+		if sync, ok := conf.Additional["SyncRemote"].(bool); ok {
+			inf.SyncRemote = sync
+		}
 		storer, err := git.NewSynchro(inf)
 		if err != nil {
 			return err
