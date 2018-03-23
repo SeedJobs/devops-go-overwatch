@@ -108,17 +108,24 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 				Public:    !pro.GetPrivate(),
 				Protected: []string{},
 			}
-			branches, _, err := m.client.Repositories.ListBranches(context.Background(),
-				pro.GetOwner().GetLogin(),
-				pro.GetName(),
-				&gogithub.ListOptions{})
-			if err != nil {
-				panic(err)
-			}
-			for _, branch := range branches {
-				if branch.GetProtected() {
-					repo.Protected = append(repo.Protected, branch.GetName())
+			branchOpts := &gogithub.ListOptions{}
+			for {
+				branches, branchresp, err := m.client.Repositories.ListBranches(context.Background(),
+					pro.GetOwner().GetLogin(),
+					pro.GetName(),
+					branchOpts)
+				if err != nil {
+					panic(err)
 				}
+				for _, branch := range branches {
+					if branch.GetProtected() {
+						repo.Protected = append(repo.Protected, branch.GetName())
+					}
+				}
+				if branchresp.NextPage == 0 {
+					break
+				}
+				branchOpts.Page = branchresp.NextPage
 			}
 			allRepos = append(allRepos, repo)
 		}
