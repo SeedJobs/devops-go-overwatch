@@ -64,7 +64,7 @@ func (m *Manager) Readconfig(conf overwatch.IamManagerConfig) error {
 	return nil
 }
 
-func ReadFiles(dir string, transformer func([]byte) []overwatch.IamResource) ([]overwatch.IamResource, error) {
+func ReadFiles(dir string, transformer func([]byte) ([]overwatch.IamResource, error)) ([]overwatch.IamResource, error) {
 	if f, err := os.Stat(dir); os.IsNotExist(err) && (f != nil && !f.IsDir()) {
 		return nil, fmt.Errorf("Unable to load directory %s, %v", dir, err)
 	}
@@ -83,7 +83,11 @@ func ReadFiles(dir string, transformer func([]byte) []overwatch.IamResource) ([]
 		if err != nil {
 			return nil, err
 		}
-		collection = append(collection, transformer(buff)...)
+		items, err := transformer(buff)
+		if err != nil {
+			return nil, err
+		}
+		collection = append(collection, items...)
 	}
 	return collection, nil
 }

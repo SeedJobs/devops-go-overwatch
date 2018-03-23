@@ -24,14 +24,14 @@ func (p project) AppliedConfig() []overwatch.IamConfig {
 	return nil
 }
 
-func projectTransformer(buff []byte) []overwatch.IamResource {
+func projectTransformer(buff []byte) ([]overwatch.IamResource, error) {
 	projects := []project{}
 	if err := yaml.Unmarshal(buff, &projects); err != nil {
-		panic(err)
+		return nil, err
 	}
 	collections := []overwatch.IamResource{}
 	for _, pro := range projects {
 		collections = append(collections, pro)
 	}
-	return collections
+	return collections, nil
 }

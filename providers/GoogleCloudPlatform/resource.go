@@ -25,15 +25,15 @@ func (r userAccount) AppliedConfig() []overwatch.IamConfig {
 	return nil
 }
 
-func userAccountTransformer(buff []byte) []overwatch.IamResource {
+func userAccountTransformer(buff []byte) ([]overwatch.IamResource, error) {
 	var items userCollection
 	if err := yaml.Unmarshal(buff, &items); err != nil {
-		panic(err)
+		return nil, err
 	}
 	collection := []overwatch.IamResource{}
 	for _, obj := range items {
 		obj.Type = "ServiceAccount"
 		collection = append(collection, obj)
 	}
-	return collection
+	return collection, nil
 }
