@@ -3,18 +3,27 @@ package github
 import (
 	"context"
 	"fmt"
+<<<<<<< HEAD
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 	"reflect"
 	"time"
+=======
+	"net/http"
+	"path"
+	"reflect"
+>>>>>>> master
 
 	overwatch "github.com/SeedJobs/devops-go-overwatch"
 	"github.com/SeedJobs/devops-go-overwatch/providers/default"
 	gogithub "github.com/google/go-github/github"
 	"golang.org/x/oauth2"
+<<<<<<< HEAD
 	yaml "gopkg.in/yaml.v2"
+=======
+>>>>>>> master
 )
 
 type manager struct {
@@ -50,7 +59,11 @@ func (m *manager) LoadConfiguration(conf overwatch.IamManagerConfig) error {
 	} else {
 		return fmt.Errorf("GITHUB_ORG was not defined in conf additional map")
 	}
+<<<<<<< HEAD
 	return m.readFromDisk()
+=======
+	return m.readFromDisc()
+>>>>>>> master
 }
 
 func (m *manager) Resources() []overwatch.IamResource {
@@ -66,6 +79,7 @@ func (m *manager) Resources() []overwatch.IamResource {
 // ListModifiedResources will examine resources loaded from Github and check
 // them against the expected store configuration.
 func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
+<<<<<<< HEAD
 	notcached, modified := m.seperateLists(m.fetchOrgProjects())
 	return append(notcached, modified...), nil
 }
@@ -87,6 +101,30 @@ func (m *manager) Resync() ([]overwatch.IamResource, error) {
 		m.base.Expire = time.Now().Add(m.base.Conf.TimeOut)
 	}
 	return items, nil
+=======
+	modified := []overwatch.IamResource{}
+	for _, obj := range m.fetchOrgProjects() {
+		// early exit if possible
+		if _, exist := m.resources[obj.GetType()]; !exist {
+			break
+		}
+		// Check if our stored config matches what is contained
+		// inside the current resource
+		store, exist := m.resources[obj.GetType()][obj.GetName()]
+		switch {
+		case !exist:
+			// Do nothing
+		// Had to use DeepEqual as the standard equal just simply doesn't work in this case
+		case !reflect.DeepEqual(store, obj):
+			modified = append(modified, obj)
+		}
+	}
+	return modified, nil
+}
+
+func (m *manager) Resync() ([]overwatch.IamResource, error) {
+	return nil, overwatch.ErrNotImplemented
+>>>>>>> master
 }
 
 func (m *manager) fetchOrgProjects() []overwatch.IamResource {
@@ -130,6 +168,7 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 	return allRepos
 }
 
+<<<<<<< HEAD
 func (m *manager) seperateLists(collection []overwatch.IamResource) ([]overwatch.IamResource, []overwatch.IamResource) {
 	notcached, modified := []overwatch.IamResource{}, []overwatch.IamResource{}
 	for _, item := range collection {
@@ -150,6 +189,9 @@ func (m *manager) seperateLists(collection []overwatch.IamResource) ([]overwatch
 }
 
 func (m *manager) readFromDisk() error {
+=======
+func (m *manager) readFromDisc() error {
+>>>>>>> master
 	// Remove items for the internal cache
 	for key, _ := range m.resources {
 		delete(m.resources, key)
@@ -168,6 +210,7 @@ func (m *manager) readFromDisk() error {
 	}
 	return nil
 }
+<<<<<<< HEAD
 
 func (m *manager) writeToDisk() error {
 	for key, items := range m.resources {
@@ -192,3 +235,5 @@ func (m *manager) writeToDisk() error {
 	}
 	return nil
 }
+=======
+>>>>>>> master
