@@ -66,14 +66,22 @@ func (m *manager) Resources() []overwatch.IamResource {
 // ListModifiedResources will examine resources loaded from Github and check
 // them against the expected store configuration.
 func (m *manager) ListModifiedResources() ([]overwatch.IamResource, error) {
-	notcached, modified := m.seperateLists(m.fetchOrgProjects())
+	collection, err := m.fetchOrgProjects()
+	if err != nil {
+		return nil, err
+	}
+	notcached, modified := m.seperateLists(collection)
 	return append(notcached, modified...), nil
 }
 
 func (m *manager) Resync() ([]overwatch.IamResource, error) {
 	items := []overwatch.IamResource{}
 	if time.Now().After(m.base.Expire) {
-		notcached, modified := m.seperateLists(m.fetchOrgProjects())
+		collection, err := m.fetchOrgProjects()
+		if err != nil {
+			return nil, err
+		}
+		notcached, modified := m.seperateLists(collection)
 		for _, item := range notcached {
 			if _, exist := m.resources[item.GetType()]; !exist {
 				m.resources[item.GetType()] = map[string]overwatch.IamResource{}
@@ -89,7 +97,7 @@ func (m *manager) Resync() ([]overwatch.IamResource, error) {
 	return items, nil
 }
 
-func (m *manager) fetchOrgProjects() []overwatch.IamResource {
+func (m *manager) fetchOrgProjects() ([]overwatch.IamResource, error) {
 	opt := &gogithub.RepositoryListByOrgOptions{
 		ListOptions: gogithub.ListOptions{
 			PerPage: 64,
@@ -100,7 +108,7 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 		// This call is limited by the token issuer as it can only see what the issuer can see inside the org
 		repos, resp, err := m.client.Repositories.ListByOrg(context.Background(), m.organisation, opt)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		for _, pro := range repos {
 			repo := project{
@@ -115,7 +123,7 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 					pro.GetName(),
 					branchOpts)
 				if err != nil {
-					panic(err)
+					return nil, err
 				}
 				for _, branch := range branches {
 					if branch.GetProtected() {
@@ -134,7 +142,7 @@ func (m *manager) fetchOrgProjects() []overwatch.IamResource {
 		}
 		opt.Page = resp.NextPage
 	}
-	return allRepos
+	return allRepos, nil
 }
 
 func (m *manager) seperateLists(collection []overwatch.IamResource) ([]overwatch.IamResource, []overwatch.IamResource) {
