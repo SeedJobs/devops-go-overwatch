@@ -106,7 +106,7 @@ func (m *cloudIamManager) loadFromDisc() error {
 	for item, _ := range m.resources {
 		delete(m.resources, item)
 	}
-	dir := path.Join(m.base.Storer.GetPath(), "GoogleCloudPlatform/Project", m.Project, "ServiceAcccount")
+	dir := path.Join(m.base.Storer.GetPath(), "GoogleCloudPlatform/Project", m.Project, "ServiceAccounts")
 	serviceaccounts, err := abstract.ReadFiles(dir, userAccountTransformer)
 	if err != nil {
 		return err
